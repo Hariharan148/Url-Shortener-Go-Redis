@@ -31,7 +31,7 @@ type Response struct{
 
 func ShortenUrl(c *fiber.Ctx)error{
 	var body = new(Request)
-	
+	fmt.Println(c.IP())
 	if err := c.BodyParser(&body); err != nil{
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error":"cannot parse the body"})
 	}
