@@ -2,7 +2,6 @@ package main
 
 
 import (
-	"fmt"
 	"os"
 	"log"
 	"github.com/gofiber/fiber/v2"
@@ -12,7 +11,7 @@ import (
 )
 
 
-func setupRoutes(app *fiber.app){
+func setupRoutes(app *fiber.App){
 
 	app.Get("/:url", routes.ResolveUrl)
 	app.Post("/api/v2", routes.ShortenUrl)

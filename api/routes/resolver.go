@@ -7,7 +7,7 @@ import (
 )
 
 
-func ResolveUrl(c *fiber.Ctx){
+func ResolveUrl(c *fiber.Ctx)error{
 	url := c.Params("url")
 
 	r := database.Client(0)
@@ -17,13 +17,13 @@ func ResolveUrl(c *fiber.Ctx){
 	if err == redis.Nil{
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error":"short url not found in database"})
 	} else if err != nil{
-		return c.Status(fiber.StatusInternalError).JSON(fiber.Map{"error":"can't connect to db"})
+		return c.Status(fiber.StatusInternalServerError ).JSON(fiber.Map{"error":"can't connect to db"})
 	}
 
 	dbInr := database.Client(1)
 	defer dbInr.Close()
 
-	_ = dnInr.Incr(database.Ctx, "counter")
+	_ = dbInr.Incr(database.Ctx, "counter")
 
 	return c.Redirect(value, 301)
 }

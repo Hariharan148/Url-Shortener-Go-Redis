@@ -5,8 +5,12 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/go-redis/redis/v8"
 	"strconv"
-	"google/uuid"
+	"github.com/google/uuid"
+	"os"
+	"fmt"
 	"github.com/asaskevich/govalidator"
+	"github.com/Hariharan148/Url-Shortener-Go-Redis/api/database"
+	"github.com/Hariharan148/Url-Shortener-Go-Redis/api/helpers"
 )
 
 
@@ -25,12 +29,13 @@ type Response struct{
 }
 
 
-func ShortenUrl(c *fiber.Ctx){
-	var body *Request
+func ShortenUrl(c *fiber.Ctx)error{
+	var body = new(Request)
 	
 	if err := c.BodyParser(&body); err != nil{
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error":"cannot parse the body"})
 	}
+	fmt.Println(body)
 
 
 	//rate limiting
@@ -39,13 +44,17 @@ func ShortenUrl(c *fiber.Ctx){
 	defer rd1.Close()
 
 	val, err := rd1.Get(database.Ctx, c.IP()).Result()
+	fmt.Println("check1")
+	fmt.Println(err)
 	if err == redis.Nil{
+		fmt.Println("check2")
 		_ = rd1.Set(database.Ctx, c.IP(), os.Getenv("API_QUOTA"), 30*60*time.Second).Err()
 	} else {
-		valInt := strconv.Atoi(val)
+		val, _ = rd1.Get(database.Ctx, c.IP()).Result()
+		valInt, _ := strconv.Atoi(val)
 		if valInt <= 0 {
-			limit, _ := rd1.TTL(database.Ctx. c.IP()).Result()
-			return c.Status(fiber.StatusServiceUnavailabe).JSON(fiber.Map{
+			limit, _ := rd1.TTL(database.Ctx, c.IP()).Result()
+			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
 				"error": "Rate limit exceeded",
 				"rate_limit_reset": limit / time.Nanosecond / time.Minute,
 			})
@@ -83,8 +92,8 @@ func ShortenUrl(c *fiber.Ctx){
 		body.Expiry = 24
 	}
 
-	val, _:= r.Get(database.Ctx, id).Result()
-	if val != ""{
+	value, _ := r.Get(database.Ctx, id).Result()
+	if value != ""{
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error":"short url already in use"})
 	}
 
@@ -108,10 +117,10 @@ func ShortenUrl(c *fiber.Ctx){
 	rd1.Decr(database.Ctx, c.IP())
 
 	limit, _ := rd1.Get(database.Ctx, c.IP()).Result()
-	resp.XRateLimit:= strconv.Atoi(limit)
+	resp.XRateLimit, _ = strconv.Atoi(limit)
 
 
-	limitReset, _ : rd1.TTL(database.Ctx, c.IP()).Result()
+	limitReset, _ := rd1.TTL(database.Ctx, c.IP()).Result()
 	resp.XRateLimitRest = limitReset / time.Nanosecond / time.Minute
 
 	resp.CustomShort = os.Getenv("DOMAIN") + "/" + id
